@@ -70,7 +70,7 @@ export function Navbar() {
                 <DropdownMenuItem asChild>
                   <Link href="/mis-boletos">Mis Boletos</Link>
                 </DropdownMenuItem>
-                {user.user_metadata?.role === "admin" && (
+                {user.app_metadata?.role === "admin" && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin">Panel Admin</Link>
                   </DropdownMenuItem>
@@ -129,7 +129,7 @@ export function Navbar() {
                 <Link href="/mis-boletos" className="block py-2 text-gray-600" onClick={() => setIsMenuOpen(false)}>
                   Mis Boletos
                 </Link>
-                {user.user_metadata?.role === "admin" && (
+                {user.app_metadata?.role === "admin" && (
                   <Link href="/admin" className="block py-2 text-gray-600" onClick={() => setIsMenuOpen(false)}>
                     Panel Admin
                   </Link>
