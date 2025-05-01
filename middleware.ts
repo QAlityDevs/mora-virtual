@@ -1,33 +1,72 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
+export async function middleware(request: NextRequest) {
 
-  // Verificar si el usuario está autenticado
+
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // Do not run code between createServerClient and
+  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+  // issues with users being randomly logged out.
+
+  // IMPORTANT: DO NOT REMOVE auth.getUser()
+
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  // Si no hay sesión y la ruta es protegida, redirigir a login
-  if (!session && req.nextUrl.pathname.startsWith("/admin")) {
-    const redirectUrl = new URL("/auth", req.url)
-    redirectUrl.searchParams.set("redirect", req.nextUrl.pathname)
-    return NextResponse.redirect(redirectUrl)
+  if (
+    !user &&
+    !request.nextUrl.pathname.startsWith('/login') &&
+    !request.nextUrl.pathname.startsWith('/auth')
+  ) {
+    // no user, potentially respond by redirecting the user to the login page
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 
-  // Si hay sesión, verificar si el usuario es admin para rutas de administración
-  if (session && req.nextUrl.pathname.startsWith("/admin")) {
-    const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single()
+  if (user) {
+    // Check if the user has the "admin" role
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
 
-    if (!user || user.role !== "admin") {
-      return NextResponse.redirect(new URL("/", req.url))
+    if (userData?.role !== 'admin') {
+      // User is not an admin, redirect to an access denied page
+      const url = request.nextUrl.clone()
+      url.pathname = '/access-denied'
+      return NextResponse.redirect(url)
     }
   }
 
-  return res
+  return supabaseResponse
 }
 
 // Configurar las rutas que deben ser verificadas por el middleware
