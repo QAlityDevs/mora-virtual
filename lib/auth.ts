@@ -37,6 +37,16 @@ export async function getUser() {
   return user
 }
 
+export async function isAdmin(user: any) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+  if (error) throw error
+  return data.role === "admin"
+  }
+
 export async function updateUserRole(userId: string, role: string) {
   // Actualizar el rol en la tabla users
   const { error: updateError } = await supabase.from("users").update({ role }).eq("id", userId)

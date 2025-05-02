@@ -4,21 +4,25 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { signOut, getUser } from "@/lib/auth"
+import { signOut, getUser, isAdmin } from "@/lib/auth"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Menu, User, LogOut } from "lucide-react"
 
 export function Navbar() {
   const [user, setUser] = useState<any>(null)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [admin, setAdmin] = useState(false)
   const pathname = usePathname()
 
   useEffect(() => {
     const checkUser = async () => {
       const currentUser = await getUser()
       setUser(currentUser)
+      if (currentUser) {
+        const adminStatus = await isAdmin(currentUser)
+        setAdmin(adminStatus)
+      }
     }
-
     checkUser()
   }, [])
 
@@ -70,7 +74,7 @@ export function Navbar() {
                 <DropdownMenuItem asChild>
                   <Link href="/mis-boletos">Mis Boletos</Link>
                 </DropdownMenuItem>
-                {user.app_metadata?.role === "admin" && (
+                {admin && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin">Panel Admin</Link>
                   </DropdownMenuItem>

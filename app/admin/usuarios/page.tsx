@@ -6,15 +6,11 @@ import { UserList } from "@/components/admin/user-list"
 export default async function AdminUsuariosPage() {
   const user = await getUser()
 
-  if (!user) {
-    redirect("/auth?redirect=/admin/usuarios")
-  }
-
   // Verificar si el usuario es administrador
   const { data: userData } = await supabase.from("users").select("role").eq("id", user.id).single()
 
   if (!userData || userData.role !== "admin") {
-    redirect("/")
+    redirect("/auth")
   }
 
   // Obtener todos los usuarios
