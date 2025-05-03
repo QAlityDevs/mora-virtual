@@ -25,9 +25,9 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
   const supabase = await createClient(token);
   const body = await req.json();
 
-  if (!body.name || !body.bio) {
+  if (!body.name?.trim() || !body.bio?.trim()) {
     return NextResponse.json(
-      { error: "Name and bio are required" },
+      { error: "Name and bio are required." },
       { status: 400 }
     );
   }
