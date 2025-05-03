@@ -59,7 +59,7 @@ export default function ActoresPage() {
         },
       });
       if (!res.ok) throw new Error("Error al eliminar el actor.");
-      setActores((prev) => prev.filter((actor) => actor.id !== id));
+      router.refresh();
     } catch (err: any) {
       setError(err.message);
     }
