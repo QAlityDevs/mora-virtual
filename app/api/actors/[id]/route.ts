@@ -67,6 +67,15 @@ export async function DELETE(
   const supabase = await createClient(token);
 
   try {
+    const { count } = await supabase
+      .from("actors")
+      .select("*", { count: "exact" })
+      .eq("id", id);
+
+    if (!count) {
+      return NextResponse.json({ error: "Actor not found" }, { status: 404 });
+    }
+
     const { error } = await supabase.from("actors").delete().eq("id", id);
 
     if (error) {
