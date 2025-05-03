@@ -1,47 +1,76 @@
-# Teatro Virtual Mora
+# Teatro Mora Virtual
 
-Este proyecto es una aplicación web desarrollada con Next.js que permite la gestión de eventos y actores para el Teatro Mora. Utiliza Supabase como backend para la autenticación y el almacenamiento de datos.
+Plataforma de eventos teatrales con cola virtual y foros interactivos.
 
-## Características
+## Índice
 
-- **Autenticación de Usuarios**: Implementada con Supabase para gestionar el acceso a las rutas de administración.
-- **Gestión de Actores**: Permite crear, editar y eliminar actores.
+- [Requisitos previos](#requisitos-previos)
+- [Instalación](#instalación)
+- [Configuración de Supabase](#configuración-de-supabase)
+  - [Creación de proyecto](#creación-de-proyecto)
+  - [Estructura de la base de datos](#estructura-de-la-base-de-datos)
+  - [Configuración de autenticación](#configuración-de-autenticación)
+- [Variables de entorno](#variables-de-entorno)
+- [Ejecución del proyecto](#ejecución-del-proyecto)
 
-## Requisitos Previos
+## Requisitos previos
 
-- Node.js (se utilizó versión 22)
-- Una cuenta de Supabase
-- Yarn o npm para la gestión de paquetes
+- Node.js 18.x o superior
+- npm o yarn
+- Cuenta en [Supabase](https://supabase.com)
 
 ## Instalación
 
 1. Clona el repositorio:
 
-   ```bash
-   git clone https://github.com/QAlityDevs/mora-virtual.git
-   cd mora-virtual
-   ```
+```bash
+git clone https://github.com/tu-usuario/teatro-mora-virtual.git
+cd teatro-mora-virtual
+```
 
 2. Instala las dependencias:
 
-   ```bash
-   npm install
-   # o
-   yarn install
-   ```
+```bash
+npm install
+# o
+yarn install
+```
 
-3. Configura las variables de entorno:
+## Configuración de Supabase
 
-   Crea un archivo `.env.local` en la raíz del proyecto y añade tus credenciales de Supabase:
+### Creación de proyecto
 
-   ```plaintext
-   NEXT_PUBLIC_SUPABASE_URL=tu_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_supabase_anon_key
-   ```
+1. Crea una cuenta en [Supabase](https://supabase.com) si aún no tienes una.
+2. Crea un nuevo proyecto desde el dashboard.
+3. Anota la URL del proyecto y la anon key (clave anónima) que usarás más adelante.
 
-## Uso
+### Estructura de la base de datos
 
-Ejecuta el servidor de desarrollo:
+Ejecuta el siguiente script SQL en el Editor SQL de Supabase o ocupar pg_restore para reestablecer las tablas predeterminadas para el proyecto:
+
+[dump.sql](./dump.sql)
+
+
+### Configuración de autenticación
+
+1. En el panel de Supabase, ve a "Authentication" > "Providers".
+2. Asegúrate de que el proveedor "Email" esté habilitado.
+3. Puedes configurar otros proveedores como Google, Facebook, etc. si lo deseas.
+
+## Variables de entorno
+
+Crea un archivo `.env.local` en la raíz del proyecto con las siguientes variables:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-clave-anon-publica
+```
+
+Reemplaza los valores con los de tu proyecto de Supabase.
+
+## Ejecución del proyecto
+
+1. Inicia el servidor de desarrollo:
 
 ```bash
 npm run dev
@@ -49,22 +78,5 @@ npm run dev
 yarn dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la aplicación.
+2. Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
-## Contribución
-
-Si deseas contribuir al proyecto, por favor sigue estos pasos:
-
-1. Haz un fork del repositorio.
-2. Crea una nueva rama (`git checkout -b feature/nueva-funcionalidad`).
-3. Realiza tus cambios y haz commit (`git commit -am 'feat(scope): description'`).
-4. Sube tus cambios a la rama (`git push origin feature/nueva-funcionalidad`).
-5. Abre un Pull Request.
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
-
-## Contacto
-
-Para cualquier pregunta o comentario, por favor contacta a [camilo.verav@usm.cl](mailto:camilo.verav@usm.cl).
