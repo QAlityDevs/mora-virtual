@@ -76,7 +76,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Actor not found" }, { status: 404 });
     }
 
-    const { error } = await supabase.from("actors").delete().eq("id", id);
+    const { error } = await supabase
+      .from("actors")
+      .delete()
+      .eq("id", id)
+      .single();
 
     if (error) {
       throw error;
