@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request, context: { params: { id: string } }) {
-  const { id } = await context.params;
+  const { id } = context.params;
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
   const supabase = await createClient(token);
 
@@ -20,7 +20,7 @@ export async function GET(req: Request, context: { params: { id: string } }) {
 }
 
 export async function PUT(req: Request, context: { params: { id: string } }) {
-  const { id } = await context.params;
+  const { id } = context.params;
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
   const supabase = await createClient(token);
   const body = await req.json();
@@ -62,7 +62,7 @@ export async function DELETE(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = context.params;
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
   const supabase = await createClient(token);
 
