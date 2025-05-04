@@ -22,13 +22,18 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json({ error: "Token requerido" }, { status: 401 });
-    }
-
     try {
-      const supabase = await createClient(token);
+      // Validar autenticación
+      const supabase = await createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+      }
+
       const body = await request.json();
       const validation = EventSchema.safeParse(body);
 
