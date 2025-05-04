@@ -24,7 +24,7 @@ export function Navbar() {
       }
     }
     checkUser()
-  }, [])
+  }, [pathname])
 
   const handleSignOut = async () => {
     await signOut()
