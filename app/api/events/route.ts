@@ -22,13 +22,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json({ error: "Token requerido" }, { status: 401 });
-    }
-
     try {
-      const supabase = await createClient(token);
+      const supabase = await createClient();
       const body = await request.json();
       const validation = EventSchema.safeParse(body);
 

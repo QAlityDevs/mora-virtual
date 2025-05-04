@@ -14,12 +14,11 @@ export async function GET(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    const token = req.headers.get("Authorization")?.replace("Bearer ", "");
     if (!token) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
     try {
-      const supabase = await createClient(token);
+      const supabase = await createClient();
 
       const { data, error } = await supabase
         .from("events")
@@ -89,7 +88,6 @@ export async function POST(
     }
 
     // Validar autenticación
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
     if (!token) {
       return NextResponse.json(
         { error: "Acceso no autorizado" },
@@ -97,7 +95,7 @@ export async function POST(
       );
     }
     try {
-      const supabase = await createClient(token);
+      const supabase = await createClient();
 
       // Parsear y validar el body
       const body = await request.json();
@@ -156,13 +154,12 @@ export async function DELETE(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
     // Validar autenticación
-    const token = req.headers.get("Authorization")?.replace("Bearer ", "");
     if (!token) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     try {
-      const supabase = await createClient(token);
+      const supabase = await createClient();
 
       // Validar body
       const body = await req.json();
@@ -244,13 +241,12 @@ export async function PUT(
     }
 
     // Validar autenticación
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
     if (!token) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     try {
-      const supabase = await createClient(token);
+      const supabase = await createClient();
       const body = await request.json();
 
       // Validar body con el schema existente
