@@ -58,7 +58,6 @@ export async function GET(
         status: data.status,
         actors,
       };
-      console.log("[GET] Payload de respuesta:", responsePayload);
 
       return NextResponse.json(responsePayload);
     } catch (error) {
@@ -185,9 +184,6 @@ export async function DELETE(
         .eq("event_id", id)
         .eq("actor_id", actor_id);
 
-      console.log("Status:", status); // Debería ser 200 si es exitoso
-      console.log("Datos:", rows);
-      console.log("Error:", selectError);
       if (selectError) {
         return NextResponse.json(
           { error: selectError.message },
@@ -209,7 +205,6 @@ export async function DELETE(
         .delete()
         .eq("id", rowId);
 
-      console.log(rowId);
       if (deleteError) {
         return NextResponse.json(
           { error: deleteError.message },
