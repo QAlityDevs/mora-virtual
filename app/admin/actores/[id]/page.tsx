@@ -24,11 +24,7 @@ export default function EditarActorPage({
   useEffect(() => {
     async function fetchActor() {
       try {
-        const res = await fetch(`/api/actors/${params.id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
+        const res = await fetch(`/api/actors/${params.id}`);
         if (!res.ok) throw new Error("Error al obtener los datos del actor.");
         const data: Actor = await res.json();
         setActor(data);

@@ -3,8 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request, context: { params: { id: string } }) {
   const { id } = context.params;
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  const supabase = await createClient(token);
+  const supabase = await createClient();
 
   const { data: actor, error } = await supabase
     .from("actors")
@@ -21,8 +20,7 @@ export async function GET(req: Request, context: { params: { id: string } }) {
 
 export async function PUT(req: Request, context: { params: { id: string } }) {
   const { id } = context.params;
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  const supabase = await createClient(token);
+  const supabase = await createClient();
   const body = await req.json();
 
   if (!body.name?.trim() || !body.bio?.trim()) {
@@ -63,8 +61,7 @@ export async function DELETE(
   context: { params: { id: string } }
 ) {
   const { id } = context.params;
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  const supabase = await createClient(token);
+  const supabase = await createClient();
 
   try {
     const { count } = await supabase
