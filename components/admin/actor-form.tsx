@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { supabase } from "@/lib/supabase"
 
 interface ActorFormProps {
   actor?: {
@@ -44,15 +43,31 @@ export function ActorForm({ actor, isEditing = false }: ActorFormProps) {
       }
 
       if (isEditing && actor) {
-        // Update existing actor
-        const { error } = await supabase.from("actors").update(actorData).eq("id", actor.id)
+        const response = await fetch(`/api/actors/${actor.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(actorData),
+        })
 
-        if (error) throw error
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || "Error al actualizar el actor")
+        }
       } else {
-        // Create new actor
-        const { error } = await supabase.from("actors").insert([actorData])
+        const response = await fetch("/api/actors", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(actorData),
+        })
 
-        if (error) throw error
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || "Error al crear el actor")
+        }
       }
 
       router.push("/admin/actores")
