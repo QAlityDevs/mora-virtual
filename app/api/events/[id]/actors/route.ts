@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { EventSchema, UUIDSchema, ActorRelationSchema } from "@/schemas/events";
+import { UUIDSchema, ActorRelationSchema } from "@/schemas/events";
 
 export async function GET(
   req: Request,
@@ -14,13 +14,18 @@ export async function GET(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
+    // Validar autenticación
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-    try {
-      const supabase = await createClient(token);
 
+    try {
       const { data, error } = await supabase
         .from("events")
         .select(
@@ -89,16 +94,16 @@ export async function POST(
     }
 
     // Validar autenticación
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json(
-        { error: "Acceso no autorizado" },
-        { status: 401 }
-      );
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
     try {
-      const supabase = await createClient(token);
-
       // Parsear y validar el body
       const body = await request.json();
       const parsed = ActorRelationSchema.safeParse(body);
@@ -156,14 +161,17 @@ export async function DELETE(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
     // Validar autenticación
-    const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     try {
-      const supabase = await createClient(token);
-
       // Validar body
       const body = await req.json();
       const { actor_id } = body;
@@ -244,13 +252,17 @@ export async function PUT(
     }
 
     // Validar autenticación
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     try {
-      const supabase = await createClient(token);
       const body = await request.json();
 
       // Validar body con el schema existente
