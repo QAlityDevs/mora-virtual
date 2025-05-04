@@ -152,3 +152,84 @@ describe("ActoresPage", () => {
     });
   });
 });
+
+describe("EditarActorPage", () => {
+  beforeEach(() => {
+    global.fetch = jest.fn();
+    Storage.prototype.getItem = jest.fn(() => "fake-token");
+    window.confirm = jest.fn(() => true);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+    Storage.prototype.getItem = jest.fn();
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("displays loading state while fetching", async () => {
+    jest.spyOn(global, "fetch").mockImplementation(() => new Promise(() => {}));
+
+    render(<EditarActorPage params={{ id: "123" }} />);
+    expect(screen.getByText("Cargando datos del actor...")).toBeInTheDocument();
+  });
+
+  it("displays error on fetch failure", async () => {
+    (global.fetch as jest.Mock).mockRejectedValueOnce(
+      new Error("Network error")
+    );
+
+    render(<EditarActorPage params={{ id: "123" }} />);
+    expect(await screen.findByText(/Error: Network error/)).toBeInTheDocument();
+  });
+
+  it("uses URL parameter in API call", async () => {
+    const mockFetch = (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ id: "123", name: "Test Actor" }),
+    });
+
+    render(<EditarActorPage params={{ id: "123" }} />);
+    await screen.findByText("Mock Actor Form");
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/actors/123",
+      expect.anything()
+    );
+  });
+
+  it("includes authorization token", async () => {
+    const mockToken = "fake-token";
+    Storage.prototype.getItem = jest.fn().mockReturnValue(mockToken);
+    const mockFetch = (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ id: "123", name: "Test Actor" }),
+    });
+
+    render(<EditarActorPage params={{ id: "123" }} />);
+    await screen.findByText("Mock Actor Form");
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        headers: {
+          Authorization: `Bearer ${mockToken}`,
+        },
+      })
+    );
+  });
+
+  it("handles API error responses", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    });
+
+    render(<EditarActorPage params={{ id: "123" }} />);
+    expect(
+      await screen.findByText(/Error: Error al obtener los datos del actor/)
+    ).toBeInTheDocument();
+  });
+});
