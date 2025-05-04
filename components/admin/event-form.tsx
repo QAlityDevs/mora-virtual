@@ -57,7 +57,7 @@ export function EventForm({
     date: "",
     time: "",
     sale_start_time: "",
-    image_url: "",
+    image_url: undefined,
     status: "upcoming" as "upcoming" | "active" | "completed",
   });
 
@@ -74,7 +74,7 @@ export function EventForm({
         date: initialEventData.date,
         time: initialEventData.time,
         sale_start_time: initialEventData.sale_start_time,
-        image_url: initialEventData.image_url || "",
+        image_url: initialEventData.image_url || undefined,
         status: initialEventData.status,
       });
 
@@ -122,6 +122,7 @@ export function EventForm({
 
       const validation = EventSchema.safeParse({
         ...formData,
+        image_url: formData.image_url || undefined,
         sale_start_time: saleStartISO,
       });
 
@@ -267,7 +268,9 @@ export function EventForm({
               id="image_url"
               type="url"
               value={formData.image_url}
-              onChange={(e) => handleChange("image_url", e.target.value)}
+              onChange={(e) =>
+                handleChange("image_url", e.target.value || undefined)
+              }
               placeholder="https://ejemplo.com/imagen.jpg"
               disabled={isSubmitting}
             />
