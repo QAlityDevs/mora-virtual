@@ -21,13 +21,19 @@ jest.mock("next/navigation", () => ({
 describe("ActoresPage", () => {
   beforeEach(() => {
     global.fetch = jest.fn();
-    Storage.prototype.getItem = jest.fn(() => "fake-token");
+    Object.defineProperty(document, "cookie", {
+      writable: true,
+      value: "token=fake-token",
+    });
     window.confirm = jest.fn(() => true);
   });
 
   afterEach(() => {
+    Object.defineProperty(document, "cookie", {
+      writable: true,
+      value: "",
+    });
     jest.clearAllMocks();
-    Storage.prototype.getItem = jest.fn();
   });
 
   afterAll(() => {
@@ -125,7 +131,6 @@ describe("ActoresPage", () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith("/api/actors/1", {
         method: "DELETE",
-        headers: { Authorization: "Bearer fake-token" },
       });
       expect(mockRefresh).toHaveBeenCalled();
     });
@@ -156,13 +161,15 @@ describe("ActoresPage", () => {
 describe("EditarActorPage", () => {
   beforeEach(() => {
     global.fetch = jest.fn();
-    Storage.prototype.getItem = jest.fn(() => "fake-token");
+    Object.defineProperty(document, "cookie", {
+      writable: true,
+      value: "token=fake-token",
+    });
     window.confirm = jest.fn(() => true);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
-    Storage.prototype.getItem = jest.fn();
   });
 
   afterAll(() => {
@@ -194,31 +201,7 @@ describe("EditarActorPage", () => {
     render(<EditarActorPage params={{ id: "123" }} />);
     await screen.findByText("Mock Actor Form");
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      "/api/actors/123",
-      expect.anything()
-    );
-  });
-
-  it("includes authorization token", async () => {
-    const mockToken = "fake-token";
-    Storage.prototype.getItem = jest.fn().mockReturnValue(mockToken);
-    const mockFetch = (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ id: "123", name: "Test Actor" }),
-    });
-
-    render(<EditarActorPage params={{ id: "123" }} />);
-    await screen.findByText("Mock Actor Form");
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        headers: {
-          Authorization: `Bearer ${mockToken}`,
-        },
-      })
-    );
+    expect(mockFetch).toHaveBeenCalledWith("/api/actors/123");
   });
 
   it("handles API error responses", async () => {
