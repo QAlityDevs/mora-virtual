@@ -31,11 +31,7 @@ export default function ActoresPage() {
   useEffect(() => {
     async function fetchActores() {
       try {
-        const res = await fetch("/api/actors", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
+        const res = await fetch("/api/actors");
         if (!res.ok) throw new Error("Error al obtener los actores.");
         const data: Actor[] = await res.json();
         setActores(data);
@@ -54,9 +50,6 @@ export default function ActoresPage() {
     try {
       const res = await fetch(`/api/actors/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
       });
       if (!res.ok) throw new Error("Error al eliminar el actor.");
       router.refresh();

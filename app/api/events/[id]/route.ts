@@ -14,12 +14,8 @@ export async function GET(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
     try {
-      const supabase = await createClient(token);
+      const supabase = await createClient();
 
       const { data: event, error } = await supabase
         .from("events")
@@ -64,12 +60,8 @@ export async function PUT(
     }
 
     // Autenticación
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
     try {
-      const supabase = await createClient(token);
+      const supabase = await createClient();
       const body = await request.json();
 
       // 3. Validación del cuerpo
@@ -156,12 +148,8 @@ export async function DELETE(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     try {
-      const supabase = await createClient(token);
+      const supabase = await createClient();
 
       // Primero eliminar relaciones con actores
       const { error: relationError } = await supabase

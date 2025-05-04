@@ -19,8 +19,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  const supabase = await createClient(token);
+  const supabase = await createClient();
   const body = await req.json();
 
   if (!body.name?.trim() || !body.bio?.trim()) {
