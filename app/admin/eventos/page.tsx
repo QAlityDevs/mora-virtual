@@ -1,130 +1,186 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { PlusCircle } from "lucide-react"
+"use client";
 
-export default function AdminEventosPage() {
-  // This would normally be fetched from Supabase
-  const events = [
-    {
-      id: "1",
-      name: "Romeo y Julieta",
-      date: "2023-12-15",
-      time: "19:00",
-      status: "upcoming",
-    },
-    {
-      id: "2",
-      name: "El Fantasma de la Ópera",
-      date: "2023-12-20",
-      time: "20:00",
-      status: "upcoming",
-    },
-    {
-      id: "3",
-      name: "Hamlet",
-      date: "2023-12-25",
-      time: "18:30",
-      status: "upcoming",
-    },
-  ]
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+
+type Event = {
+  id: string;
+  name: string;
+  date: string;
+  status: "upcoming" | "active" | "completed";
+  actors: Actor[];
+};
+
+type Actor = {
+  id: string;
+  name: string;
+  bio: string;
+  photo_url?: string;
+};
+
+export default function EventosPage() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const router = useRouter();
+
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const res = await fetch("/api/events", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (!res.ok) throw new Error("Error al obtener los eventos.");
+        const data: Event[] = await res.json();
+        setEvents(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEvents();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Estás seguro de eliminar este evento?")) return;
+
+    try {
+      const res = await fetch(`/api/events/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (!res.ok) throw new Error("Error al eliminar el evento.");
+      setEvents(events.filter((event) => event.id !== id));
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "active":
+        return "default";
+      case "upcoming":
+        return "secondary";
+      case "completed":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "active":
+        return "Activo";
+      case "upcoming":
+        return "Próximo";
+      case "completed":
+        return "Finalizado";
+      default:
+        return "Desconocido";
+    }
+  };
+
+  const filteredEvents = events.filter(
+    (event) =>
+      event.name.toLowerCase().includes(search.toLowerCase()) ||
+      event.date.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="container mx-auto py-16 px-6">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Gestión de Eventos</h1>
-        <Button asChild>
-          <Link href="/admin/eventos/nuevo">
-            <PlusCircle className="mr-2 h-4 w-4" /> Nuevo Evento
-          </Link>
-        </Button>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Gestión de Eventos</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Nombre
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Fecha
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Hora
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Estado
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {events.map((event) => (
-              <tr key={event.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{event.name}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-500">
-                    {new Date(event.date).toLocaleDateString("es-ES", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-500">{event.time}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      event.status === "upcoming"
-                        ? "bg-blue-100 text-blue-800"
-                        : event.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    {event.status === "upcoming" ? "Próximo" : event.status === "active" ? "Activo" : "Completado"}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <Link href={`/admin/eventos/${event.id}`} className="text-purple-600 hover:text-purple-900 mr-4">
-                    Editar
-                  </Link>
-                  <Link
-                    href={`/admin/eventos/${event.id}/actores`}
-                    className="text-purple-600 hover:text-purple-900 mr-4"
-                  >
-                    Actores
-                  </Link>
-                  <Link href={`/admin/eventos/${event.id}/cola`} className="text-purple-600 hover:text-purple-900">
-                    Cola
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
+        <div className="flex justify-between mb-4 gap-4">
+          <Input
+            placeholder="Buscar eventos..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Button onClick={() => router.push("/admin/eventos/nuevo")}>
+            Nuevo Evento
+          </Button>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredEvents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center">
+                  No se encontraron eventos.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredEvents.map((event) => (
+                <TableRow key={event.id}>
+                  <TableCell className="font-medium">{event.name}</TableCell>
+                  <TableCell>
+                    {format(new Date(event.date), "PPP", { locale: es })}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(event.status)}>
+                      {getStatusLabel(event.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => router.push(`/admin/eventos/${event.id}`)}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDelete(event.id)}
+                    >
+                      Eliminar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
 }
