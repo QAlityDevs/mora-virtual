@@ -14,9 +14,18 @@ export async function GET(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    try {
-      const supabase = await createClient();
+    // Validar autenticación
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    try {
       const { data: event, error } = await supabase
         .from("events")
         .select("*")
@@ -59,9 +68,17 @@ export async function PUT(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    // Autenticación
+    // Validar autenticación
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
     try {
-      const supabase = await createClient();
       const body = await request.json();
 
       // 3. Validación del cuerpo
@@ -148,9 +165,18 @@ export async function DELETE(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    try {
-      const supabase = await createClient();
+    // Validar autenticación
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    try {
       // Primero eliminar relaciones con actores
       const { error: relationError } = await supabase
         .from("event_actors")
@@ -159,13 +185,23 @@ export async function DELETE(
 
       if (relationError) {
         console.error("Error deleting actor relations:", relationError.message);
+        return NextResponse.json(
+          {
+            error: "Error eliminando relaciones de actores del evento",
+            details: relationError.message,
+          },
+          { status: 500 }
+        );
       }
 
       const { error } = await supabase.from("events").delete().eq("id", id);
 
       if (error) {
         return NextResponse.json(
-          { error: "Error deleting event" },
+          {
+            error: "Error deleting event",
+            details: error.message,
+          },
           { status: 500 }
         );
       }

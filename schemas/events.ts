@@ -5,12 +5,20 @@ export const EventSchema = z.object({
   description: z
     .string()
     .min(10, "Descripción debe tener al menos 10 caracteres"),
-  date: z
+  date: z.string().refine((d) => {
+    const date = new Date(d);
+    return !isNaN(date.getTime()) && d.split("-")[0].length === 4;
+  }, "Fecha inválida (Formato: YYYY-MM-DD)"),
+  time: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD)"),
-  time: z.string().regex(/^\d{2}:\d{2}$/, "Formato de hora inválido (HH:MM)"),
+    .regex(
+      /^([01]\d|2[0-3]):[0-5]\d$/,
+      "Formato de hora inválido (HH:MM, 00:00 a 23:59)"
+    ),
   image_url: z.string().url("URL de imagen inválida").optional(),
-  sale_start_time: z.string().datetime("Formato datetime inválido"),
+  sale_start_time: z.string().datetime({
+    message: "Formato datetime inválido (ISO 8601 requerido)",
+  }),
   status: z.enum(["upcoming", "active", "completed"]).default("upcoming"),
 });
 
