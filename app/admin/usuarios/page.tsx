@@ -1,11 +1,15 @@
 import { getUser } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/server"
 import { UserList } from "@/components/admin/user-list"
 
 export default async function AdminUsuariosPage() {
+  const supabase = createClient()
   const user = await getUser()
 
+  if (!user) {
+    redirect("/auth")
+  }
   // Verificar si el usuario es administrador
   const { data: userData } = await supabase.from("users").select("role").eq("id", user.id).single()
 
