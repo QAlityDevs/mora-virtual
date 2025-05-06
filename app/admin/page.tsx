@@ -59,7 +59,7 @@ export default function AdminPage() {
         <Card>
           <CardHeader>
             <CardTitle>Gestión de Usuarios</CardTitle>
-            <CardDescription>Administrar cuentas de usuarios</CardDescription>
+            <CardDescription>Administrar cuentas de usuarios y roles</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full">
