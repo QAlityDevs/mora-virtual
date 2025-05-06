@@ -24,8 +24,8 @@ Plataforma de eventos teatrales con cola virtual y foros interactivos.
 1. Clona el repositorio:
 
 ```bash
-git clone https://github.com/tu-usuario/teatro-mora-virtual.git
-cd teatro-mora-virtual
+git clone https://github.com/QAlityDevs/mora-virtual
+cd mora-virtual
 ```
 
 2. Instala las dependencias:
