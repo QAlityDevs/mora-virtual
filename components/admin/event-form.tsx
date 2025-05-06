@@ -1,80 +1,191 @@
-"use client"
+"use client";
 
-import type React from "react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { EventSchema } from "@/schemas/events";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { supabase } from "@/lib/supabase"
+type Actor = {
+  id: string;
+  name: string;
+};
 
 interface EventFormProps {
   event?: {
-    id: string
-    name: string
-    description: string
-    date: string
-    time: string
-    sale_start_time: string
-    image_url?: string
-  }
-  isEditing?: boolean
+    id: string;
+    name: string;
+    description: string;
+    date: string;
+    time: string;
+    sale_start_time: string;
+    image_url?: string;
+    status: "upcoming" | "active" | "completed";
+    actors?: Actor[];
+  };
+  isEditing?: boolean;
 }
 
-export function EventForm({ event, isEditing = false }: EventFormProps) {
-  const router = useRouter()
-  const [name, setName] = useState(event?.name || "")
-  const [description, setDescription] = useState(event?.description || "")
-  const [date, setDate] = useState(event?.date || "")
-  const [time, setTime] = useState(event?.time || "")
-  const [saleStartTime, setSaleStartTime] = useState(
-    event?.sale_start_time ? new Date(event.sale_start_time).toISOString().slice(0, 16) : "",
-  )
-  const [imageUrl, setImageUrl] = useState(event?.image_url || "")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export function EventForm({
+  event: initialEventData,
+  isEditing: isEditing,
+}: EventFormProps) {
+  const router = useRouter();
+  const [actors, setActors] = useState<Actor[]>([]);
+  const [selectedActorIds, setSelectedActorIds] = useState<string[]>([]);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    date: "",
+    time: "",
+    sale_start_time: "",
+    image_url: undefined,
+    status: "upcoming" as "upcoming" | "active" | "completed",
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isActorSelectOpen, setIsActorSelectOpen] = useState(false);
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    if (initialEventData) {
+      setFormData({
+        name: initialEventData.name,
+        description: initialEventData.description,
+        date: initialEventData.date,
+        time: initialEventData.time,
+        sale_start_time: initialEventData.sale_start_time,
+        image_url: initialEventData.image_url || undefined,
+        status: initialEventData.status,
+      });
+
+      setSelectedActorIds(initialEventData.actors?.map((a) => a.id) || []);
+    }
+  }, [initialEventData]);
+
+  // Cargar actores
+  useEffect(() => {
+    const fetchActors = async () => {
+      try {
+        const res = await fetch("/api/actors", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        if (!res.ok) throw new Error("Error cargando actores");
+        const data = await res.json();
+        setActors(data);
+      } catch (err: any) {
+        setError(err.message);
+      }
+    };
+
+    fetchActors();
+  }, []);
+
+  const handleActorSelect = (actorId: string) => {
+    setSelectedActorIds((prev) => {
+      if (prev.includes(actorId)) {
+        return prev.filter((id) => id !== actorId);
+      }
+      return [...prev, actorId];
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setError(null)
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
 
     try {
-      const eventData = {
-        name,
-        description,
-        date,
-        time,
-        sale_start_time: new Date(saleStartTime).toISOString(),
-        image_url: imageUrl || null,
-        status: "upcoming",
+      const saleStartISO = new Date(formData.sale_start_time).toISOString();
+
+      const validation = EventSchema.safeParse({
+        ...formData,
+        image_url: formData.image_url || undefined,
+        sale_start_time: saleStartISO,
+      });
+
+      if (!validation.success) {
+        const errors = validation.error.errors.map((e) => e.message).join(", ");
+        throw new Error(`Validación fallida: ${errors}`);
       }
 
-      if (isEditing && event) {
-        // Update existing event
-        const { error } = await supabase.from("events").update(eventData).eq("id", event.id)
+      const eventEndpoint =
+        isEditing && initialEventData
+          ? `/api/events/${initialEventData.id}`
+          : "/api/events";
 
-        if (error) throw error
-      } else {
-        // Create new event
-        const { error } = await supabase.from("events").insert([eventData])
+      const eventMethod = isEditing ? "PUT" : "POST";
 
-        if (error) throw error
+      const eventResponse = await fetch(eventEndpoint, {
+        method: eventMethod,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(validation.data),
+      });
+
+      if (!eventResponse.ok) {
+        const errorData = await eventResponse.json();
+        throw new Error(errorData.error || "Error guardando evento");
       }
 
-      router.push("/admin/eventos")
-      router.refresh()
+      const eventData = await eventResponse.json();
+      const eventId = eventData.id || initialEventData?.id;
+
+      if (eventId && selectedActorIds.length > 0) {
+        const actorsResponse = await fetch(`/api/events/${eventId}/actors`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ actor_ids: selectedActorIds }),
+        });
+
+        if (!actorsResponse.ok) {
+          const errorData = await actorsResponse.json();
+          throw new Error(errorData.error || "Error actualizando actores");
+        }
+      }
+
+      router.push("/admin/eventos");
+      router.refresh();
     } catch (err: any) {
-      setError(err.message || "Error al guardar el evento")
+      setError(err.message || "Error al guardar el evento");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
+
+  const handleChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   return (
     <Card>
@@ -92,29 +203,50 @@ export function EventForm({ event, isEditing = false }: EventFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="name">Nombre del Evento</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+              required
+              disabled={isSubmitting}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Descripción</Label>
             <Textarea
               id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={formData.description}
+              onChange={(e) => handleChange("description", e.target.value)}
               rows={5}
               required
+              disabled={isSubmitting}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">Fecha</Label>
-              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+              <Input
+                id="date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => handleChange("date", e.target.value)}
+                required
+                disabled={isSubmitting}
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="time">Hora</Label>
-              <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+              <Input
+                id="time"
+                type="time"
+                value={formData.time}
+                onChange={(e) => handleChange("time", e.target.value)}
+                required
+                disabled={isSubmitting}
+              />
             </div>
           </div>
 
@@ -123,9 +255,10 @@ export function EventForm({ event, isEditing = false }: EventFormProps) {
             <Input
               id="sale_start_time"
               type="datetime-local"
-              value={saleStartTime}
-              onChange={(e) => setSaleStartTime(e.target.value)}
+              value={formData.sale_start_time}
+              onChange={(e) => handleChange("sale_start_time", e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -134,21 +267,99 @@ export function EventForm({ event, isEditing = false }: EventFormProps) {
             <Input
               id="image_url"
               type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
+              value={formData.image_url}
+              onChange={(e) =>
+                handleChange("image_url", e.target.value || undefined)
+              }
               placeholder="https://ejemplo.com/imagen.jpg"
+              disabled={isSubmitting}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Estado</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => handleChange("status", value)}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecciona un estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="upcoming">Próximo</SelectItem>
+                <SelectItem value="active">Activo</SelectItem>
+                <SelectItem value="completed">Finalizado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Actores Asociados</Label>
+            <Select
+              open={isActorSelectOpen}
+              onOpenChange={setIsActorSelectOpen}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue
+                  placeholder={`Seleccionados: ${selectedActorIds.length}`}
+                />
+              </SelectTrigger>
+              <SelectContent className="max-h-60 overflow-y-auto">
+                {actors.map((actor) => (
+                  <div
+                    key={actor.id}
+                    className="flex items-center p-2 hover:bg-accent cursor-pointer"
+                    onClick={() => handleActorSelect(actor.id)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedActorIds.includes(actor.id)}
+                      readOnly
+                      className="mr-2 h-4 w-4"
+                    />
+                    <span>{actor.name}</span>
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="text-sm text-muted-foreground mt-1">
+              {selectedActorIds.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {actors
+                    .filter((actor) => selectedActorIds.includes(actor.id))
+                    .map((actor) => (
+                      <span
+                        key={actor.id}
+                        className="px-2 py-1 bg-accent rounded-full text-xs"
+                      >
+                        {actor.name}
+                      </span>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
         </CardContent>
+
         <CardFooter className="flex justify-between">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            disabled={isSubmitting}
+          >
             Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Guardando..." : isEditing ? "Actualizar Evento" : "Crear Evento"}
+            {isSubmitting
+              ? "Guardando..."
+              : isEditing
+              ? "Actualizar Evento"
+              : "Crear Evento"}
           </Button>
         </CardFooter>
       </form>
     </Card>
-  )
+  );
 }
