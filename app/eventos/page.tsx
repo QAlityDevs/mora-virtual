@@ -34,7 +34,7 @@ export default async function EventosPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {events.map((event: any) => (
+          {events.map((event) => (
             <Card
               key={event.id}
               className="overflow-hidden transition-all hover:shadow-lg"
