@@ -1,10 +1,23 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { getEvents } from "@/lib/data-service"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+type Event = {
+  id: string;
+  name: string;
+  description: string;
+  date: string;
+  time: string;
+  image_url: string;
+  status: string;
+  sale_start_time: string;
+  created_at: string;
+};
 
 export default async function EventosPage() {
-  const events = await getEvents()
+  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/events`);
+
+  const events: Event[] = await response.json();
 
   return (
     <div className="container mx-auto py-16 px-6">
@@ -12,7 +25,9 @@ export default async function EventosPage() {
 
       {events.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 mb-4">No hay eventos disponibles en este momento.</p>
+          <p className="text-gray-500 mb-4">
+            No hay eventos disponibles en este momento.
+          </p>
           <Button asChild>
             <Link href="/">Volver al Inicio</Link>
           </Button>
@@ -20,7 +35,10 @@ export default async function EventosPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {events.map((event) => (
-            <Card key={event.id} className="overflow-hidden transition-all hover:shadow-lg">
+            <Card
+              key={event.id}
+              className="overflow-hidden transition-all hover:shadow-lg"
+            >
               <img
                 src={event.image_url || "/placeholder.svg?height=400&width=600"}
                 alt={event.name}
@@ -37,7 +55,9 @@ export default async function EventosPage() {
                   })}{" "}
                   - {event.time}
                 </p>
-                <p className="text-gray-700 mb-4 line-clamp-2">{event.description}</p>
+                <p className="text-gray-700 mb-4 line-clamp-2">
+                  {event.description}
+                </p>
                 <Button asChild className="w-full">
                   <Link href={`/eventos/${event.id}`}>Ver Detalles</Link>
                 </Button>
@@ -47,5 +67,5 @@ export default async function EventosPage() {
         </div>
       )}
     </div>
-  )
+  );
 }
