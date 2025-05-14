@@ -14,6 +14,8 @@ type Event = {
   created_at: string;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function EventosPage() {
   const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/events`);
 
