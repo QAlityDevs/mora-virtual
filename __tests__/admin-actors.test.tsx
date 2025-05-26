@@ -3,10 +3,6 @@ import userEvent from "@testing-library/user-event";
 import ActoresPage from "@/app/admin/actores/page";
 import EditarActorPage from "@/app/admin/actores/[id]/page";
 
-jest.mock("@/components/admin/actor-form", () => ({
-  ActorForm: jest.fn((props) => <div>Mock Actor Form</div>),
-}));
-
 // Mock next/navigation
 const mockPush = jest.fn();
 const mockRefresh = jest.fn();
