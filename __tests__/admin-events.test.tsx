@@ -179,7 +179,6 @@ describe("EditarEventoPage", () => {
 
   beforeEach(() => {
     (useParams as jest.Mock).mockReturnValue({ id: "1" });
-    (Storage.prototype.getItem as jest.Mock).mockReturnValue("fake-token");
   });
 
   afterEach(() => {
