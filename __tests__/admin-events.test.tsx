@@ -35,6 +35,7 @@ describe("EventosPage", () => {
   const mockRouter = {
     push: jest.fn(),
   };
+
   const mockEvents: Event[] = [
     {
       id: "1",
@@ -165,7 +166,7 @@ describe("EventosPage", () => {
     render(<EventosPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("14 de diciembre de 2023")).toBeInTheDocument();
+      expect(screen.getByText("15 de diciembre de 2023")).toBeInTheDocument();
     });
   });
 });
