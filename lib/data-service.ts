@@ -376,3 +376,30 @@ export async function updateUserProfile(
 
   return data[0]
 }
+
+export async function getEventForum(eventId: string) {
+  const { data, error } = await supabase
+    .from('forums')
+    .select('*, forum_messages(*)')
+    .eq('event_id', eventId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
+export async function createForumMessage({
+  forumId,
+  userId,
+  content
+}: {
+  forumId: string;
+  userId: string;
+  content: string;
+}) {
+  return supabase
+    .from('forum_messages')
+    .insert({ forum_id: forumId, user_id: userId, content })
+    .select()
+    .single();
+}
