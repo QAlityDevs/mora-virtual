@@ -58,14 +58,12 @@ export function EventForum({ eventId }: EventForumProps) {
     setError(null)
 
     try {
-      const postData = {
+      await createForumPost({
         event_id: eventId,
         user_id: user.id,
         content: message,
-        parent_id: replyTo,
-      }
-
-      await createForumPost(postData)
+        parent_id: replyTo
+      })
 
       // Refresh posts
       const forumPosts = await getEventForumPosts(eventId)
