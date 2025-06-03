@@ -30,6 +30,7 @@ export default function ForosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [groupedPosts, setGroupedPosts] = useState<Record<string, ForumPost[]>>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -42,7 +43,18 @@ export default function ForosPage() {
         });
         if (!res.ok) throw new Error("Error al obtener los mensajes");
         const data = await res.json();
-        setPosts(data);
+        
+        // Agrupar posts por evento
+        const grouped = data.reduce((acc: Record<string, ForumPost[]>, post: ForumPost) => {
+          const eventId = post.event.id;
+          if (!acc[eventId]) {
+            acc[eventId] = [];
+          }
+          acc[eventId].push(post);
+          return acc;
+        }, {});
+        
+        setGroupedPosts(grouped);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -69,13 +81,6 @@ export default function ForosPage() {
     }
   };
 
-  const filteredPosts = posts.filter(
-    (post) =>
-      post.content.toLowerCase().includes(search.toLowerCase()) ||
-      post.user.name.toLowerCase().includes(search.toLowerCase()) ||
-      post.event.name.toLowerCase().includes(search.toLowerCase())
-  );
-
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "PPp", { locale: es });
   };
@@ -100,50 +105,48 @@ export default function ForosPage() {
           />
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Usuario</TableHead>
-              <TableHead>Contenido</TableHead>
-              <TableHead>Evento</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPosts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  No se encontraron mensajes
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredPosts.map((post) => (
-                <TableRow key={post.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span>{post.user.name}</span>
-                      {post.user.role === "actor" && (
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                          Actor
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-[300px] truncate">
-                    {post.content}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="link"
-                      onClick={() => router.push(`/eventos/${post.event.id}`)}
-                    >
-                      {post.event.name}
-                    </Button>
-                  </TableCell>
-                  <TableCell>{formatDate(post.created_at)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
+        {Object.entries(groupedPosts).map(([eventId, posts]) => (
+          <div key={eventId} className="mb-8 border rounded-lg p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                {posts[0].event.name}
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/eventos/${eventId}`)}
+              >
+                Ver Evento
+              </Button>
+            </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Usuario</TableHead>
+                  <TableHead>Contenido</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {posts.map((post) => (
+                  <TableRow key={post.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span>{post.user.name}</span>
+                        {post.user.role === "actor" && (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                            Actor
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[300px]">
+                      {post.content}
+                    </TableCell>
+                    <TableCell>{formatDate(post.created_at)}</TableCell>
+                    <TableCell>
                       <Button
                         variant="destructive"
                         size="sm"
@@ -151,13 +154,13 @@ export default function ForosPage() {
                       >
                         Eliminar
                       </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ))}
       </CardContent>
     </Card>
   );
