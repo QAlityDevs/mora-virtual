@@ -1,3 +1,11 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
 export type Database = {
   public: {
     Tables: {
@@ -94,38 +102,6 @@ export type Database = {
         }
         Relationships: []
       }
-      forum_messages: {
-        Row: {
-          content: string
-          created_at: string
-          forum_id: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          forum_id: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          forum_id?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "forum_messages_forum_id_fkey"
-            columns: ["forum_id"]
-            isOneToOne: false
-            referencedRelation: "forums"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       forum_posts: {
         Row: {
           content: string
@@ -133,6 +109,7 @@ export type Database = {
           event_id: string
           id: string
           parent_id: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -141,6 +118,7 @@ export type Database = {
           event_id: string
           id?: string
           parent_id?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -149,6 +127,7 @@ export type Database = {
           event_id?: string
           id?: string
           parent_id?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -166,30 +145,11 @@ export type Database = {
             referencedRelation: "forum_posts"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      forums: {
-        Row: {
-          created_at: string
-          event_id: string
-          id: string
-        }
-        Insert: {
-          created_at?: string
-          event_id: string
-          id?: string
-        }
-        Update: {
-          created_at?: string
-          event_id?: string
-          id?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "forums_event_id_fkey"
-            columns: ["event_id"]
+            foreignKeyName: "forum_posts_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "events"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
