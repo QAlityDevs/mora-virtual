@@ -293,8 +293,33 @@ export async function updateTicketStatus(ticketId: string, status: "reserved" | 
 export async function getEventForumPosts(eventId: string): Promise<ForumPostWithUser[]> {
   try {
     const response = await fetch(`/api/events/${eventId}/forum`);
-    if (!response.ok) throw new Error('Failed to fetch posts');
-    return await response.json();
+    if (!response.ok) throw new Error('Failed to fetch forum posts');
+    const data = await response.json();
+    
+    // Create a map of all posts
+    const postsMap = new Map<string, ForumPostWithUser>(data.map((post: ForumPostWithUser) => 
+      [post.id, { ...post, replies: [] }]
+    ));
+
+    // Build nested structure
+    const nestedPosts: ForumPostWithUser[] = [];
+    postsMap.forEach((post) => {
+      if (post.parent_id) {
+        const parent = postsMap.get(post.parent_id);
+        if (parent) parent.replies.push(post);
+      } else {
+        nestedPosts.push(post);
+      }
+    });
+
+    // Sort by creation date
+    const sortByDate = (a: ForumPostWithUser, b: ForumPostWithUser) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+
+    nestedPosts.sort(sortByDate);
+    nestedPosts.forEach(post => post.replies.sort(sortByDate));
+
+    return nestedPosts;
   } catch (error) {
     console.error("Error fetching forum posts:", error);
     return [];
