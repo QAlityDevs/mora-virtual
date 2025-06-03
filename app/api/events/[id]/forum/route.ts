@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const supabase = await createClient();
-  const id = params.id;
+  const id = await params.id;
 
   // Validate UUID
   const validated = UUIDSchema.safeParse(id);
@@ -20,7 +20,7 @@ export async function GET(
       .from("forum_posts")
       .select(`
         *,
-        user:user_id(id, name)
+        user:user_id(id, name, role)
       `)
       .eq("event_id", id)
       .order("created_at", { ascending: false });
@@ -67,7 +67,6 @@ export async function POST(
 
     return NextResponse.json(data[0], { status: 201 });
   } catch (error) {
-    console.error(error);
     return NextResponse.json(
       { error: "Failed to create post" },
       { status: 500 }
