@@ -3,7 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
@@ -26,11 +33,12 @@ type ForumPost = {
 };
 
 export default function ForosPage() {
-  const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [groupedPosts, setGroupedPosts] = useState<Record<string, ForumPost[]>>({});
+  const [groupedPosts, setGroupedPosts] = useState<Record<string, ForumPost[]>>(
+    {}
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -43,17 +51,20 @@ export default function ForosPage() {
         });
         if (!res.ok) throw new Error("Error al obtener los mensajes");
         const data = await res.json();
-        
+
         // Agrupar posts por evento
-        const grouped = data.reduce((acc: Record<string, ForumPost[]>, post: ForumPost) => {
-          const eventId = post.event.id;
-          if (!acc[eventId]) {
-            acc[eventId] = [];
-          }
-          acc[eventId].push(post);
-          return acc;
-        }, {});
-        
+        const grouped = data.reduce(
+          (acc: Record<string, ForumPost[]>, post: ForumPost) => {
+            const eventId = post.event.id;
+            if (!acc[eventId]) {
+              acc[eventId] = [];
+            }
+            acc[eventId].push(post);
+            return acc;
+          },
+          {}
+        );
+
         setGroupedPosts(grouped);
       } catch (err: any) {
         setError(err.message);
@@ -75,7 +86,17 @@ export default function ForosPage() {
         },
       });
       if (!res.ok) throw new Error("Error al eliminar el mensaje");
-      setPosts(posts.filter((post) => post.id !== id));
+
+      setGroupedPosts((prevGrouped) =>
+        Object.fromEntries(
+          Object.entries(prevGrouped)
+            .map(([eventId, posts]) => [
+              eventId,
+              posts.filter((post) => post.id !== id),
+            ])
+            .filter(([, posts]) => posts.length > 0)
+        )
+      );
     } catch (err: any) {
       setError(err.message);
     }
@@ -108,9 +129,7 @@ export default function ForosPage() {
         {Object.entries(groupedPosts).map(([eventId, posts]) => (
           <div key={eventId} className="mb-8 border rounded-lg p-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">
-                {posts[0].event.name}
-              </h3>
+              <h3 className="text-lg font-semibold">{posts[0].event.name}</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -119,7 +138,7 @@ export default function ForosPage() {
                 Ver Evento
               </Button>
             </div>
-            
+
             <Table>
               <TableHeader>
                 <TableRow>
@@ -164,4 +183,4 @@ export default function ForosPage() {
       </CardContent>
     </Card>
   );
-} 
+}
