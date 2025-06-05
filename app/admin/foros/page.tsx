@@ -40,6 +40,7 @@ export default function ForosPage() {
     {}
   );
   const router = useRouter();
+  const [allPosts, setAllPosts] = useState<ForumPost[]>([]);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -51,21 +52,7 @@ export default function ForosPage() {
         });
         if (!res.ok) throw new Error("Error al obtener los mensajes");
         const data = await res.json();
-
-        // Agrupar posts por evento
-        const grouped = data.reduce(
-          (acc: Record<string, ForumPost[]>, post: ForumPost) => {
-            const eventId = post.event.id;
-            if (!acc[eventId]) {
-              acc[eventId] = [];
-            }
-            acc[eventId].push(post);
-            return acc;
-          },
-          {}
-        );
-
-        setGroupedPosts(grouped);
+        setAllPosts(data);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -74,6 +61,27 @@ export default function ForosPage() {
     }
     fetchPosts();
   }, []);
+
+  useEffect(() => {
+    const filtered = allPosts.filter(post => {
+      const searchLower = search.toLowerCase();
+      return (
+        post.content.toLowerCase().includes(searchLower) ||
+        post.user.name.toLowerCase().includes(searchLower) ||
+        post.user.role.toLowerCase().includes(searchLower) ||
+        post.event.name.toLowerCase().includes(searchLower)
+      );
+    });
+
+    const grouped = filtered.reduce((acc, post) => {
+      const eventId = post.event.id;
+      if (!acc[eventId]) acc[eventId] = [];
+      acc[eventId].push(post);
+      return acc;
+    }, {} as Record<string, ForumPost[]>);
+
+    setGroupedPosts(grouped);
+  }, [search, allPosts]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de eliminar este mensaje?")) return;
