@@ -290,54 +290,60 @@ export async function updateTicketStatus(ticketId: string, status: "reserved" | 
 }
 
 // Forum Posts
-export async function getEventForumPosts(eventId: string) {
-  // First get top-level posts
-  const { data: topLevelPosts, error } = await supabase
-    .from("forum_posts")
-    .select(`
-      *,
-      user:user_id(id, name)
-    `)
-    .eq("event_id", eventId)
-    .is("parent_id", null)
-    .order("created_at", { ascending: false })
+export async function getEventForumPosts(eventId: string): Promise<ForumPostWithUser[]> {
+  try {
+    const response = await fetch(`/api/events/${eventId}/forum`);
+    if (!response.ok) throw new Error('Failed to fetch forum posts');
+    const data = await response.json();
+    
+    // Create a map of all posts
+    const postsMap = new Map<string, ForumPostWithUser>(data.map((post: ForumPostWithUser) => 
+      [post.id, { ...post, replies: [] }]
+    ));
 
-  if (error) {
-    console.error("Error fetching forum posts:", error)
-    return []
-  }
-
-  // Then get replies for each post
-  const postsWithReplies = await Promise.all(
-    topLevelPosts.map(async (post) => {
-      const { data: replies } = await supabase
-        .from("forum_posts")
-        .select(`
-          *,
-          user:user_id(id, name)
-        `)
-        .eq("parent_id", post.id)
-        .order("created_at", { ascending: true })
-
-      return {
-        ...post,
-        replies: replies || [],
+    // Build nested structure
+    const nestedPosts: ForumPostWithUser[] = [];
+    postsMap.forEach((post) => {
+      if (post.parent_id) {
+        const parent = postsMap.get(post.parent_id);
+        if (parent) parent.replies.push(post);
+      } else {
+        nestedPosts.push(post);
       }
-    }),
-  )
+    });
 
-  return postsWithReplies
+    // Sort by creation date
+    const sortByDate = (a: ForumPostWithUser, b: ForumPostWithUser) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+
+    nestedPosts.sort(sortByDate);
+    nestedPosts.forEach(post => post.replies.sort(sortByDate));
+
+    return nestedPosts;
+  } catch (error) {
+    console.error("Error fetching forum posts:", error);
+    return [];
+  }
 }
 
 export async function createForumPost(postData: Omit<ForumPost, "id" | "created_at">) {
-  const { data, error } = await supabase.from("forum_posts").insert([postData]).select()
-
-  if (error) {
-    console.error("Error creating forum post:", error)
-    throw error
+  try {
+    const response = await fetch(`/api/events/${postData.event_id}/forum`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: postData.user_id,
+        content: postData.content,
+        parentId: postData.parent_id
+      })
+    });
+    
+    if (!response.ok) throw new Error('Failed to create post');
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating forum post:", error);
+    throw error;
   }
-
-  return data[0]
 }
 
 export async function deleteForumPost(postId: string) {
@@ -375,4 +381,31 @@ export async function updateUserProfile(
   }
 
   return data[0]
+}
+
+export async function getEventForum(eventId: string) {
+  const { data, error } = await supabase
+    .from('forums')
+    .select('*, forum_messages(*)')
+    .eq('event_id', eventId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
+export async function createForumMessage({
+  forumId,
+  userId,
+  content
+}: {
+  forumId: string;
+  userId: string;
+  content: string;
+}) {
+  return supabase
+    .from('forum_messages')
+    .insert({ forum_id: forumId, user_id: userId, content })
+    .select()
+    .single();
 }
