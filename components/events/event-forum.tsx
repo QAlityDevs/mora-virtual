@@ -15,6 +15,72 @@ interface EventForumProps {
   eventId: string
 }
 
+function ForumPost({ 
+  post,
+  onReply,
+  depth = 0 
+}: { 
+  post: ForumPostWithUser;
+  onReply: (postId: string) => void;
+  depth?: number;
+}) {
+  const maxDepth = 3; // Prevent infinite nesting
+  if (depth > maxDepth) return null;
+
+  return (
+    <div 
+      className={`border rounded-lg p-4 ${depth > 0 ? 'ml-8 mt-4' : 'mb-4'}`}
+      style={{ marginLeft: `${depth * 2}rem` }}
+    >
+      <div className="flex gap-4">
+        <Avatar className="w-10 h-10">
+          <AvatarImage src={post.user?.avatar_url || ""} alt={post.user?.name || "Usuario"} />
+          <AvatarFallback>{(post.user?.name || "U").substring(0, 2).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-medium">{post.user?.name || "Usuario"}</span>
+            {post.user?.role === "actor" && (
+              <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full">Actor</span>
+            )}
+            <span className="text-gray-500 text-sm">
+              {new Date(post.created_at).toLocaleString("es-ES", {
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+          <p className="text-gray-700">{post.content}</p>
+          {onReply && (
+            <button
+              onClick={() => onReply(post.id)}
+              className="text-sm text-purple-600 mt-2 hover:underline"
+            >
+              Responder
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Render nested replies */}
+      {post.replies && post.replies.length > 0 && (
+        <div className="mt-4 space-y-4">
+          {post.replies.map((reply) => (
+            <ForumPost 
+              key={reply.id} 
+              post={reply} 
+              onReply={onReply}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function EventForum({ eventId }: EventForumProps) {
   const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -58,14 +124,12 @@ export function EventForum({ eventId }: EventForumProps) {
     setError(null)
 
     try {
-      const postData = {
+      await createForumPost({
         event_id: eventId,
         user_id: user.id,
         content: message,
-        parent_id: replyTo,
-      }
-
-      await createForumPost(postData)
+        parent_id: replyTo
+      })
 
       // Refresh posts
       const forumPosts = await getEventForumPosts(eventId)
@@ -114,70 +178,11 @@ export function EventForum({ eventId }: EventForumProps) {
       ) : (
         <div className="space-y-6 mb-8">
           {posts.map((post) => (
-            <div key={post.id} className="border rounded-lg p-4">
-              <div className="flex gap-4">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={post.user?.avatar_url || ""} alt={post.user?.name || "Usuario"} />
-                  <AvatarFallback>{(post.user?.name || "U").substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium">{post.user?.name || "Usuario"}</span>
-                    {post.user?.role === "actor" && (
-                      <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full">Actor</span>
-                    )}
-                    <span className="text-gray-500 text-sm">
-                      {new Date(post.created_at).toLocaleString("es-ES", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-gray-700">{post.content}</p>
-                  {isLoggedIn && (
-                    <button
-                      onClick={() => handleReply(post.id)}
-                      className="text-sm text-purple-600 mt-2 hover:underline"
-                    >
-                      Responder
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Replies */}
-              {post.replies && post.replies.length > 0 && (
-                <div className="ml-12 mt-4 space-y-4">
-                  {post.replies.map((reply) => (
-                    <div key={reply.id} className="flex gap-4 border-l-2 border-gray-200 pl-4">
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src={reply.user?.avatar_url || ""} alt={reply.user?.name || "Usuario"} />
-                        <AvatarFallback>{(reply.user?.name || "U").substring(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{reply.user?.name || "Usuario"}</span>
-                          {reply.user?.role === "actor" && (
-                            <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full">Actor</span>
-                          )}
-                          <span className="text-gray-500 text-sm">
-                            {new Date(reply.created_at).toLocaleString("es-ES", {
-                              day: "numeric",
-                              month: "short",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </div>
-                        <p className="text-gray-700">{reply.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ForumPost 
+              key={post.id} 
+              post={post} 
+              onReply={handleReply}
+            />
           ))}
         </div>
       )}
