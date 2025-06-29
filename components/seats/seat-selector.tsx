@@ -87,15 +87,26 @@ export function SeatSelector({ eventId, seats, userId }: SeatSelectorProps) {
         });
       }
 
-      // Redirect to checkout
-      router.push(
-        `/checkout?seats=${selectedSeats
-          .map((s) => s.id)
-          .join(",")}&event=${eventId}`
-      );
-    } catch (err: any) {
-      console.error("Error reserving seats:", err);
-      setError("Error al reservar asientos. Por favor, inténtalo de nuevo.");
+      const response = await fetch("/api/mercadopago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seats: selectedSeats,
+          eventId,
+          userId,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        window.location.href = data.init_point;
+      } else {
+        setError(data.error || "Error desconocido");
+        setIsProcessing(false);
+        return;
+      }
+    } catch {
+      setError("Error al procesar el pago. Por favor, inténtalo de nuevo.");
       setIsProcessing(false);
     }
   };
