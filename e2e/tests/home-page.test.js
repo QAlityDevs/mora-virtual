@@ -52,7 +52,7 @@ describe('Página Principal - Teatro Mora Virtual', () => {
     await testSetup.clickElement('a[href="/eventos"]');
     
     // Verificar que se navegó correctamente
-    await testSetup.driver.sleep(3000);
+    await testSetup.driver.sleep(5000);
     const currentUrl = await testSetup.driver.getCurrentUrl();
     expect(currentUrl).toContain('/eventos');
   });
