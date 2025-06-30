@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest",
+    "test": "jest --config jest.config.unit.js --testTimeout=30000",
     "test:watch": "jest --watch",
     "test:e2e": "jest --config jest.e2e.config.js --testTimeout=60000",
     "test:e2e:watch": "jest --config jest.e2e.config.js --watch",
