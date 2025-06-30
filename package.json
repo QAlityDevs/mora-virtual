@@ -16,10 +16,8 @@
     "test:e2e:basic": "jest --config jest.e2e.config.js --testPathPattern=basic-navigation.test.js",
     "test:e2e:home": "jest --config jest.e2e.config.js --testPathPattern=home-page.test.js",
     "test:e2e:auth": "jest --config jest.e2e.config.js --testPathPattern=authentication.test.js",
-    "test:e2e:events": "jest --config jest.e2e.config.js --testPathPattern=events-working.test.js",
-    "test:e2e:simple": "jest --config jest.e2e.config.js --testPathPattern=simple-navigation.test.js",
-    "test:e2e:working": "jest --config jest.e2e.config.js --testPathPattern=working-tests.test.js",
-    "test:e2e:minimal": "jest --config jest.e2e.config.js --testPathPattern=minimal.test.js"
+    "test:e2e:events": "jest --config jest.e2e.config.js --testPathPattern=events.test.js",
+    "test:e2e:simple": "jest --config jest.e2e.config.js --testPathPattern=simple-navigation.test.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
