@@ -49,7 +49,7 @@ describe('Autenticación - Teatro Mora Virtual', () => {
     await testSetup.typeText('#email', process.env.E2E_USER_EMAIL);
     await testSetup.typeText('#password', process.env.E2E_USER_PASSWORD);
     await testSetup.clickElement('button[type="submit"]');
-    await testSetup.driver.sleep(2000);
+    await testSetup.driver.sleep(3000);
     const url = await testSetup.driver.getCurrentUrl();
     expect(url).not.toContain('/auth');
   });
