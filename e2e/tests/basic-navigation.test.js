@@ -42,7 +42,7 @@ describe('Navegación Básica - Teatro Mora Virtual', () => {
     await testSetup.typeText('#email', process.env.E2E_ADMIN_EMAIL);
     await testSetup.typeText('#password', process.env.E2E_ADMIN_PASSWORD);
     await testSetup.clickElement('button[type="submit"]');
-    await testSetup.driver.sleep(2000);
+    await testSetup.driver.sleep(3000);
     const url = await testSetup.driver.getCurrentUrl();
     expect(url).not.toContain('/auth');
     await testSetup.navigateTo('/admin');
