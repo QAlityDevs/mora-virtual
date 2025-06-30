@@ -33,7 +33,7 @@ jobs:
     
     - name: Run E2E tests
       run: |
-        CI=true npm run test:e2e:auth
+        CI=true npm run test:e2e
       env:
         CI: true
         TEST_BASE_URL: http://localhost:3000
