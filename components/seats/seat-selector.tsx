@@ -13,18 +13,23 @@ import {
 import { type Seat, updateSeatStatus, createTicket } from "@/lib/data-service";
 
 interface SeatSelectorProps {
-  eventId: string
-  seats: Seat[]
-  userId: string
-  token?: string
+  eventId: string;
+  seats: Seat[];
+  userId: string;
+  token?: string;
 }
 
-export function SeatSelector({ eventId, seats, userId, token }: SeatSelectorProps) {
-  const router = useRouter()
-  const [selectedSeats, setSelectedSeats] = useState<Seat[]>([])
-  const [timeLeft, setTimeLeft] = useState(600) // 10 minutes in seconds
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export function SeatSelector({
+  eventId,
+  seats,
+  userId,
+  token,
+}: SeatSelectorProps) {
+  const router = useRouter();
+  const [selectedSeats, setSelectedSeats] = useState<Seat[]>([]);
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Group seats by row
   const seatsByRow = seats.reduce((acc, seat) => {
@@ -85,21 +90,39 @@ export function SeatSelector({ eventId, seats, userId, token }: SeatSelectorProp
           seat_id: seat.id,
           purchase_date: new Date().toISOString(),
           status: "reserved",
-        })
+        });
       }
       if (token) {
         await fetch(`/api/queue/${eventId}/complete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: token })
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: token }),
         });
       }
+
       // Redirect to checkout
-      router.push(`/checkout?seats=${selectedSeats.map((s) => s.id).join(",")}&event=${eventId}`)
+      const response = await fetch("/api/mercadopago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seats: selectedSeats,
+          eventId,
+          userId,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        window.location.href = data.init_point;
+      } else {
+        setError(data.error || "Error desconocido");
+        setIsProcessing(false);
+        return;
+      }
     } catch (err: any) {
-      console.error("Error reserving seats:", err)
-      setError("Error al reservar asientos. Por favor, inténtalo de nuevo.")
-      setIsProcessing(false)
+      console.error("Error reserving seats:", err);
+      setError("Error al reservar asientos. Por favor, inténtalo de nuevo.");
+      setIsProcessing(false);
     }
   };
 
