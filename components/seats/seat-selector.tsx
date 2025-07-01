@@ -10,9 +10,10 @@ interface SeatSelectorProps {
   eventId: string
   seats: Seat[]
   userId: string
+  token?: string
 }
 
-export function SeatSelector({ eventId, seats, userId }: SeatSelectorProps) {
+export function SeatSelector({ eventId, seats, userId, token }: SeatSelectorProps) {
   const router = useRouter()
   const [selectedSeats, setSelectedSeats] = useState<Seat[]>([])
   const [timeLeft, setTimeLeft] = useState(600) // 10 minutes in seconds
@@ -83,7 +84,13 @@ export function SeatSelector({ eventId, seats, userId }: SeatSelectorProps) {
           status: "reserved",
         })
       }
-
+      if (token) {
+        await fetch(`/api/queue/${eventId}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token })
+        });
+      }
       // Redirect to checkout
       router.push(`/checkout?seats=${selectedSeats.map((s) => s.id).join(",")}&event=${eventId}`)
     } catch (err: any) {
