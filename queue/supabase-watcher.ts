@@ -3,6 +3,7 @@ import { CronJob } from 'cron'
 import * as amqp from 'amqplib'
 import dotenv from 'dotenv'
 import path from 'path'
+import { getAmqpChannel } from '../lib/amqp-client';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env.local'),
@@ -10,7 +11,7 @@ dotenv.config({
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
 )
 
 const jobs = new Map<string, CronJob>()
@@ -25,87 +26,68 @@ interface EventRow {
   sale_start_time: string
   status: string
 }
-
-async function startWorker(eventId: string, retries = 3) {
+async function startWorker(eventId: string) {
   if (activeWorkers.has(eventId)) {
-    console.log(`Worker already active for event ${eventId}`)
-    return
+    console.log(`Worker para el evento ${eventId} ya está activo.`);
+    return;
   }
 
   try {
-    const amqpUrl = process.env.CLOUDAMQP_URL!
-    const connection = await amqp.connect(amqpUrl)
-    const channel = await connection.createChannel()
+    const channel = await getAmqpChannel(); // Usando el cliente Singleton
+    const queueName = `queue_event_${eventId}`;
+    await channel.assertQueue(queueName, { durable: true });
 
-    const queueName = `queue_event_${eventId}`
-    await channel.assertQueue(queueName, { durable: true })
-
-    console.log(`Listening to queue: ${queueName}`)
-    activeWorkers.add(eventId)
-
-    // Store channel and connection
-    channels.set(eventId, channel)
-    connections.set(eventId, connection)
+    activeWorkers.add(eventId);
+    console.log(`Escuchando en la cola: ${queueName}`);
 
     channel.consume(
       queueName,
       async (msg: amqp.ConsumeMessage | null) => {
-        if (!msg) return
+        if (!msg) return;
 
         try {
-          const { eventId, userId, token } = JSON.parse(msg.content.toString())
+          const { userId, eventId, queueToken } = JSON.parse(msg.content.toString());
 
+          // --- (CAMBIO CLAVE): LA LÓGICA DEL WORKER AHORA ES MÁS SIMPLE ---
+
+          // 1. Calcular la posición correcta y final
           const { data: lastEntry, error: lastError } = await supabase
             .from('queue')
             .select('position')
             .eq('event_id', eventId)
+            .lt('position', 999999) // Ignoramos las posiciones temporales
             .order('position', { ascending: false })
             .limit(1)
-            .maybeSingle()
+            .maybeSingle();
 
-          if (lastError) throw lastError
+          if (lastError) throw lastError;
 
-          const newPosition = lastEntry ? lastEntry.position + 1 : 1
+          const finalPosition = lastEntry ? lastEntry.position + 1 : 1;
 
-          const { data: existing } = await supabase
+          // 2. Actualizar la fila que ya existe
+          const { error: updateError } = await supabase
             .from('queue')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('event_id', eventId)
-            .maybeSingle()
+            .update({
+              position: finalPosition,
+              status: 'waiting' // Cambiamos el estado a 'waiting'
+            })
+            .eq('token', queueToken); // Usamos el token para encontrar la fila
+          
+          if (updateError) throw updateError;
+          
+          console.log(`Usuario ${userId} procesado. Posición asignada: ${finalPosition}`);
+          channel.ack(msg);
 
-          if (existing) {
-            console.log(`User already in queue: ${userId}`)
-            channel.ack(msg)
-            return
-          }
-
-          const { error: insertError } = await supabase.from('queue').insert([
-            {
-              event_id: eventId,
-              user_id: userId,
-              token,
-              status: 'waiting',
-              position: newPosition,
-            },
-          ])
-
-          if (insertError) throw insertError
-
-          console.log(`User ${userId} added to queue`)
-          channel.ack(msg)
         } catch (err) {
-          console.error('Error processing message:', err)
+          console.error('Error procesando mensaje:', err);
+          // Considera reenviar el mensaje (nack) si el error es recuperable
+          channel.nack(msg, false, false); // false para no reencolar y evitar bucles infinitos
         }
       },
       { noAck: false }
-    )
+    );
   } catch (err) {
-    console.error(`Error starting worker for ${eventId}:`, err)
-    if (retries > 0) {
-      console.log(`Retrying to start worker for ${eventId}...`)
-      setTimeout(() => startWorker(eventId, retries - 1), 5000)
-    }
+    console.error(`Error iniciando el worker para ${eventId}:`, err);
   }
 }
 
@@ -175,7 +157,7 @@ function scheduleQueueCreation(eventId: string, startTime: string) {
 }
 
 async function initActiveEvents() {
-  const { data, error }: { data: EventRow[] | null; error: any } = await supabase
+  const { data, error } = await supabase
     .from<EventRow>('events')
     .select('id, sale_start_time, status')
     .eq('status', 'active')
@@ -185,7 +167,7 @@ async function initActiveEvents() {
     return
   }
 
-  data?.forEach((event: EventRow) => {
+  data?.forEach(event => {
     scheduleQueueCreation(event.id, event.sale_start_time)
   })
 }

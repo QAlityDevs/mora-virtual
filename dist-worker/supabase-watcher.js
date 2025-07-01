@@ -1,122 +1,73 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const supabase_js_1 = require("@supabase/supabase-js");
 const cron_1 = require("cron");
-const amqp = __importStar(require("amqplib"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
+const amqp_client_1 = require("../lib/amqp-client");
 dotenv_1.default.config({
     path: path_1.default.resolve(__dirname, '../.env.local'),
 });
-const supabase = (0, supabase_js_1.createClient)(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const supabase = (0, supabase_js_1.createClient)(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY);
 const jobs = new Map();
 const activeWorkers = new Set();
 // New maps to handle channels and connections per event
 const channels = new Map();
 const connections = new Map();
-async function startWorker(eventId, retries = 3) {
+async function startWorker(eventId) {
     if (activeWorkers.has(eventId)) {
-        console.log(`Worker already active for event ${eventId}`);
+        console.log(`Worker para el evento ${eventId} ya está activo.`);
         return;
     }
     try {
-        const amqpUrl = process.env.CLOUDAMQP_URL;
-        const connection = await amqp.connect(amqpUrl);
-        const channel = await connection.createChannel();
+        const channel = await (0, amqp_client_1.getAmqpChannel)(); // Usando el cliente Singleton
         const queueName = `queue_event_${eventId}`;
         await channel.assertQueue(queueName, { durable: true });
-        console.log(`Listening to queue: ${queueName}`);
         activeWorkers.add(eventId);
-        // Store channel and connection
-        channels.set(eventId, channel);
-        connections.set(eventId, connection);
+        console.log(`Escuchando en la cola: ${queueName}`);
         channel.consume(queueName, async (msg) => {
             if (!msg)
                 return;
             try {
-                const { eventId, userId, token } = JSON.parse(msg.content.toString());
+                const { userId, eventId, queueToken } = JSON.parse(msg.content.toString());
+                // --- (CAMBIO CLAVE): LA LÓGICA DEL WORKER AHORA ES MÁS SIMPLE ---
+                // 1. Calcular la posición correcta y final
                 const { data: lastEntry, error: lastError } = await supabase
                     .from('queue')
                     .select('position')
                     .eq('event_id', eventId)
+                    .lt('position', 999999) // Ignoramos las posiciones temporales
                     .order('position', { ascending: false })
                     .limit(1)
                     .maybeSingle();
                 if (lastError)
                     throw lastError;
-                const newPosition = lastEntry ? lastEntry.position + 1 : 1;
-                const { data: existing } = await supabase
+                const finalPosition = lastEntry ? lastEntry.position + 1 : 1;
+                // 2. Actualizar la fila que ya existe
+                const { error: updateError } = await supabase
                     .from('queue')
-                    .select('id')
-                    .eq('user_id', userId)
-                    .eq('event_id', eventId)
-                    .maybeSingle();
-                if (existing) {
-                    console.log(`User already in queue: ${userId}`);
-                    channel.ack(msg);
-                    return;
-                }
-                const { error: insertError } = await supabase.from('queue').insert([
-                    {
-                        event_id: eventId,
-                        user_id: userId,
-                        token,
-                        status: 'waiting',
-                        position: newPosition,
-                    },
-                ]);
-                if (insertError)
-                    throw insertError;
-                console.log(`User ${userId} added to queue`);
+                    .update({
+                    position: finalPosition,
+                    status: 'waiting' // Cambiamos el estado a 'waiting'
+                })
+                    .eq('token', queueToken); // Usamos el token para encontrar la fila
+                if (updateError)
+                    throw updateError;
+                console.log(`Usuario ${userId} procesado. Posición asignada: ${finalPosition}`);
                 channel.ack(msg);
             }
             catch (err) {
-                console.error('Error processing message:', err);
+                console.error('Error procesando mensaje:', err);
+                // Considera reenviar el mensaje (nack) si el error es recuperable
+                channel.nack(msg, false, false); // false para no reencolar y evitar bucles infinitos
             }
         }, { noAck: false });
     }
     catch (err) {
-        console.error(`Error starting worker for ${eventId}:`, err);
-        if (retries > 0) {
-            console.log(`Retrying to start worker for ${eventId}...`);
-            setTimeout(() => startWorker(eventId, retries - 1), 5000);
-        }
+        console.error(`Error iniciando el worker para ${eventId}:`, err);
     }
 }
 // New function to stop a worker and close resources
