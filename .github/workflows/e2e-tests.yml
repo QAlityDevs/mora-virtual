@@ -28,7 +28,15 @@ jobs:
         run: npm run dev &
 
       - name: Wait for server to be ready
-        run: npx wait-on http://localhost:3000 --timeout 60000
+        run: |
+          echo "Waiting for server to start..."
+          timeout 60 bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 2; done'
+          echo "Server is ready!"
+
+      - name: Verify server response
+        run: |
+          echo "Testing server response..."
+          curl -I http://localhost:3000 || exit 1
 
       - name: Run E2E tests
         run: |
