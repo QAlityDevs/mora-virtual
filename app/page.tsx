@@ -2,31 +2,9 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
-export default function Home() {
-  // This would normally be fetched from Supabase
-  const featuredEvents = [
-    {
-      id: "1",
-      name: "Romeo y Julieta",
-      date: "2023-12-15",
-      time: "19:00",
-      image_url: "/placeholder.svg?height=400&width=600",
-    },
-    {
-      id: "2",
-      name: "El Fantasma de la Ópera",
-      date: "2023-12-20",
-      time: "20:00",
-      image_url: "/placeholder.svg?height=400&width=600",
-    },
-    {
-      id: "3",
-      name: "Hamlet",
-      date: "2023-12-25",
-      time: "18:30",
-      image_url: "/placeholder.svg?height=400&width=600",
-    },
-  ]
+export default async function Home() {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/events`)
+  const featuredEvents = await response.json().then(data => data.slice(0, 3))
 
   return (
     <div>

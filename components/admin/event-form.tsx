@@ -171,6 +171,36 @@ export function EventForm({
         }
       }
 
+      if (!isEditing && eventId) {
+        const rows = 5;
+        const rowSeating = 5;
+        const price = 5000;
+        const lettersRows = Array.from({ length: rows }, (_, i) =>
+          String.fromCharCode(65 + i)
+        );
+
+        const seatsPayload = [];
+        for (const row of lettersRows) {
+          for (let number = 1; number <= rowSeating; number++) {
+            seatsPayload.push({
+              event_id: eventId,
+              row,
+              number,
+              price: price,
+              status: "available",
+            });
+          }
+        }
+
+        await fetch("/api/events/seats", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(seatsPayload),
+        });
+      }
+
       router.push("/admin/eventos");
       router.refresh();
     } catch (err: any) {
