@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+const { execSync, exec } = require('child_process');
 
 module.exports = async function globalSetup() {
   console.log('🚀 Iniciando servidor de desarrollo para pruebas E2E...');
@@ -6,18 +6,18 @@ module.exports = async function globalSetup() {
   // Iniciar el servidor de desarrollo si no está corriendo
   try {
     // Verificar si el servidor ya está corriendo
-    execSync('curl http://localhost:3000 > /dev/null 2>&1', { stdio: 'ignore' });
+    execSync('curl http://localhost:3000', { stdio: 'ignore' });
     console.log('✅ Servidor ya está corriendo en http://localhost:3000');
   } catch (error) {
     console.log('🚀 Iniciando servidor de desarrollo...: ', error);
     // Iniciar servidor en background
-    execSync('npm run dev > /dev/null 2>&1 &', { stdio: 'ignore' });
+    execSync('env $(cat .env.local | xargs) npm run dev &', { stdio: 'ignore' });
     
     // Esperar a que el servidor esté listo
     let retries = 0;
     while (retries < 30) {
       try {
-        execSync('curl http://localhost:3000 > /dev/null 2>&1', { stdio: 'ignore' });
+        execSync('curl http://localhost:3000', { stdio: 'ignore' });
         console.log('✅ Servidor iniciado correctamente');
         break;
       } catch (error) {
