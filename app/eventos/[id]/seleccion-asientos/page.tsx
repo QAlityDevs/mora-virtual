@@ -1,21 +1,21 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getEvent } from "@/lib/data-service";
-import { SeatSelector } from "@/components/seats/seat-selector";
+import { redirect } from "next/navigation"
+import { createClient } from '@/lib/supabase/server'
+import { getEvent } from "@/lib/data-service"
+import { SeatSelector } from "@/components/seats/seat-selector"
 
-export default async function SeleccionAsientosPage({
-  params,
-}: {
-  params: { id: string };
+export default async function SeleccionAsientosPage({ params, searchParams }: { 
+  params: { id: string },
+  searchParams: { token: string }
 }) {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-
-  if (!data.user) {
-    redirect(`/auth?redirect=/eventos/${params.id}/seleccion-asientos`);
+  const { data: { user }, error } = await supabase.auth.getUser();
+  const id = params.id;
+  const token = searchParams.token;
+  // Si hay un error o no hay usuario, redirigimos.
+  if (error || !user) {
+    redirect(`/auth?redirect=/eventos/${id}/seleccion-asientos`);
   }
-
-  const event = await getEvent(params.id);
+  const event = await getEvent(id)
 
   if (!event) {
     redirect("/eventos");
@@ -35,7 +35,8 @@ export default async function SeleccionAsientosPage({
         {event.name} - {new Date(event.date).toLocaleDateString("es-ES")}{" "}
         {event.time}
       </h2>
-      <SeatSelector eventId={params.id} seats={seats} userId={data.user.id} />
+
+      <SeatSelector eventId={params.id} seats={seats} userId={user.id} token={token} />
     </div>
   );
 }

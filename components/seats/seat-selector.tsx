@@ -16,9 +16,15 @@ interface SeatSelectorProps {
   eventId: string;
   seats: Seat[];
   userId: string;
+  token?: string;
 }
 
-export function SeatSelector({ eventId, seats, userId }: SeatSelectorProps) {
+export function SeatSelector({
+  eventId,
+  seats,
+  userId,
+  token,
+}: SeatSelectorProps) {
   const router = useRouter();
   const [selectedSeats, setSelectedSeats] = useState<Seat[]>([]);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
@@ -86,7 +92,15 @@ export function SeatSelector({ eventId, seats, userId }: SeatSelectorProps) {
           status: "reserved",
         });
       }
+      if (token) {
+        await fetch(`/api/queue/${eventId}/complete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: token }),
+        });
+      }
 
+      // Redirect to checkout
       const response = await fetch("/api/mercadopago", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,8 +119,9 @@ export function SeatSelector({ eventId, seats, userId }: SeatSelectorProps) {
         setIsProcessing(false);
         return;
       }
-    } catch {
-      setError("Error al procesar el pago. Por favor, inténtalo de nuevo.");
+    } catch (err: any) {
+      console.error("Error reserving seats:", err);
+      setError("Error al reservar asientos. Por favor, inténtalo de nuevo.");
       setIsProcessing(false);
     }
   };
