@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+const { execSync, exec } = require('child_process');
 
 module.exports = async function globalSetup() {
   console.log('🚀 Iniciando servidor de desarrollo para pruebas E2E...');
@@ -11,7 +11,7 @@ module.exports = async function globalSetup() {
   } catch (error) {
     console.log('🚀 Iniciando servidor de desarrollo...: ', error);
     // Iniciar servidor en background
-    execSync('npm run dev > /dev/null 2>&1 &', { stdio: 'ignore' });
+    execSync('env $(cat .env.local | xargs) npm run dev &', { stdio: 'ignore' });
     
     // Esperar a que el servidor esté listo
     let retries = 0;
