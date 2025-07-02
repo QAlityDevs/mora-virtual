@@ -6,7 +6,7 @@ module.exports = async function globalSetup() {
   // Iniciar el servidor de desarrollo si no está corriendo
   try {
     // Verificar si el servidor ya está corriendo
-    execSync('curl -f http://localhost:3000 > /dev/null 2>&1', { stdio: 'ignore' });
+    execSync('curl http://localhost:3000', { stdio: 'ignore' });
     console.log('✅ Servidor ya está corriendo en http://localhost:3000');
   } catch (error) {
     console.log('🚀 Iniciando servidor de desarrollo...: ', error);
@@ -17,7 +17,7 @@ module.exports = async function globalSetup() {
     let retries = 0;
     while (retries < 30) {
       try {
-        execSync('curl -f http://localhost:3000 > /dev/null 2>&1', { stdio: 'ignore' });
+        execSync('curl http://localhost:3000', { stdio: 'ignore' });
         console.log('✅ Servidor iniciado correctamente');
         break;
       } catch (error) {
