@@ -23,6 +23,9 @@ jobs:
       - name: Run Jest tests
         id: jest-tests
         run: npm test -- --ci --coverage
+      - name: Run E2E tests
+        id: e2e-tests
+        run: CI=true npm run test:e2e
         
       - name: Notify Slack - Test Results
         if: always()
