@@ -31,6 +31,7 @@ Desarrollado por:
 
 - [Video entrega 1](https://www.youtube.com/watch?v=aY0UqvGblqA)
 - [Video entrega 2](https://www.youtube.com/watch?v=ky4bXkyZnF4)
+- [Video entrega 3](https://www.youtube.com/watch?v=1elRaPjRCO8)
 
 ## Levantamiento
 
