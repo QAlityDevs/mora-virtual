@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "dist-worker",
+    "rootDir": "queue",
+    "noEmit": false,
+    "esModuleInterop": true,
+    "target": "ES2020"
+  },
+  "include": ["queue/**/*.ts", "types/**/*.d.ts"]
+}
