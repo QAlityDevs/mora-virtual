@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { type Seat, updateSeatStatus, createTicket } from "@/lib/data-service";
+import { type Seat } from "@/lib/data-service";
 
 interface SeatSelectorProps {
   eventId: string;
@@ -77,21 +77,46 @@ export function SeatSelector({
     setError(null);
 
     try {
-      // Reserve seats
-      for (const seat of selectedSeats) {
-        await updateSeatStatus(seat.id, "reserved");
+      const seatIds = selectedSeats.map((seat) => seat.id);
+      const seatsResponse = await fetch(`/api/events/${eventId}/seats`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seatIds,
+          status: "reserved",
+        }),
+      });
+
+      const seatsData = await seatsResponse.json();
+
+      if (!seatsResponse.ok) {
+        setError(seatsData.error || "Error reservando asientos");
+        setIsProcessing(false);
+        return;
       }
 
-      // Create tickets
-      for (const seat of selectedSeats) {
-        await createTicket({
-          user_id: userId,
-          event_id: eventId,
-          seat_id: seat.id,
-          purchase_date: new Date().toISOString(),
-          status: "reserved",
-        });
+      const ticketsPayload = selectedSeats.map((seat) => ({
+        user_id: userId,
+        event_id: eventId,
+        seat_id: seat.id,
+        purchase_date: new Date().toISOString(),
+        status: "reserved",
+      }));
+
+      const ticketsResponse = await fetch("/api/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tickets: ticketsPayload }),
+      });
+
+      const ticketsData = await ticketsResponse.json();
+
+      if (!ticketsResponse.ok) {
+        setError(ticketsData.error || "Error creando tickets");
+        setIsProcessing(false);
+        return;
       }
+
       if (token) {
         await fetch(`/api/queue/${eventId}/complete`, {
           method: "POST",
@@ -100,8 +125,7 @@ export function SeatSelector({
         });
       }
 
-      // Redirect to checkout
-      const response = await fetch("/api/mercadopago", {
+      const mpResponse = await fetch("/api/mercadopago", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -111,17 +135,32 @@ export function SeatSelector({
         }),
       });
 
-      const data = await response.json();
-      if (response.ok) {
-        window.location.href = data.init_point;
+      const mpData = await mpResponse.json();
+      if (mpResponse.ok) {
+        window.location.href = mpData.init_point;
       } else {
-        setError(data.error || "Error desconocido");
+        await fetch(`/api/events/${eventId}/seats`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            seatIds,
+            status: "available",
+          }),
+        });
+        setError(mpData.error || "Error desconocido");
         setIsProcessing(false);
-        return;
       }
-    } catch (err: any) {
-      console.error("Error reserving seats:", err);
-      setError("Error al reservar asientos. Por favor, inténtalo de nuevo.");
+    } catch (err) {
+      const seatIds = selectedSeats.map((seat) => seat.id);
+      await fetch(`/api/events/${eventId}/seats`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seatIds,
+          status: "available",
+        }),
+      });
+      setError("Error al procesar el pago. Por favor, inténtalo de nuevo.");
       setIsProcessing(false);
     }
   };
