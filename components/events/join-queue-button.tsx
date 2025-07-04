@@ -1,85 +1,95 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { joinQueue } from "@/lib/queue-service"
-import { getUser } from "@/lib/auth"
-import { AlertCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
 
 interface JoinQueueButtonProps {
-  eventId: string
-  isQueueActive: boolean
-  saleStartTime: string
+  eventId: string;
+  eventStatus: string;
+  saleStartTime: string;
 }
 
-export function JoinQueueButton({ eventId, isQueueActive, saleStartTime }: JoinQueueButtonProps) {
-  const router = useRouter()
-  const [isJoining, setIsJoining] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+const formatTimeLeft = (ms: number) => {
+    if (ms < 0) return '00:00';
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+
+export function JoinQueueButton({ eventId, eventStatus, saleStartTime }: JoinQueueButtonProps) {
+  const router = useRouter();
+  const [timeLeft, setTimeLeft] = useState<number>(new Date(saleStartTime).getTime() - Date.now());
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(new Date(saleStartTime).getTime() - Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [saleStartTime]);
 
   const handleJoinQueue = async () => {
-    setIsJoining(true)
-    setError(null)
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    if (timeLeft > 0 && timeLeft <= 5 * 60 * 1000) {
+      router.push(`/eventos/${eventId}/pre-queue`);
+      return; 
+    }
 
     try {
-      const user = await getUser()
+      const response = await fetch(`/api/queue/${eventId}`, { method: 'POST' });
+      const data = await response.json();
 
-      if (!user) {
-        router.push(`/auth?redirect=/eventos/${eventId}`)
-        return
+      if (response.ok && data.token) {
+        router.push(`/eventos/${eventId}/waiting-room?token=${data.token}`);
+      } else {
+        throw new Error(data.error || 'Ocurrió un error desconocido.');
       }
-
-      const result = await joinQueue(user.id, eventId)
-
-      if (!result.success) {
-        throw new Error("No se pudo unir a la cola. Inténtalo de nuevo.")
-      }
-
-      router.push(`/queue/${result.data.token}`)
-    } catch (err: any) {
-      setError(err.message || "Ocurrió un error al unirse a la cola")
-    } finally {
-      setIsJoining(false)
+    } catch (error: any) {
+      console.error('Error al unirse a la cola:', error);
+      setErrorMessage(error.message);
+      setIsLoading(false);
     }
-  }
+  };
+  
+  const saleIsActive = timeLeft <= 0;
+  const inPreSaleWindow = timeLeft > 0 && timeLeft <= 5 * 60 * 1000;
+  const saleIsFuture = timeLeft > 5 * 60 * 1000;
 
-  const formatTimeRemaining = () => {
-    const now = new Date()
-    const saleStart = new Date(saleStartTime)
-    const diffMs = saleStart.getTime() - now.getTime()
-
-    if (diffMs <= 0) return "La venta comenzará pronto"
-
-    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-
-    return `La cola se habilitará en ${diffHrs}h ${diffMins}m`
+  let buttonText = '';
+  if (isLoading) {
+    buttonText = 'Ingresando...';
+  } else if (eventStatus === 'completed') {
+    buttonText = 'Venta Finalizada';
+  } else if (saleIsActive) {
+    buttonText = 'Unirse a la Fila';
+  } else if (inPreSaleWindow) {
+    buttonText = 'Unirse a la Sala de Espera';
+  } else if (saleIsFuture) {
+    buttonText = 'Venta Próximamente';
   }
 
   return (
-    <div className="space-y-4">
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {isQueueActive ? (
-        <Button onClick={handleJoinQueue} disabled={isJoining} className="w-full">
-          {isJoining ? "Uniéndose..." : "Unirse a la Cola Virtual"}
-        </Button>
-      ) : (
-        <div className="bg-gray-100 p-4 rounded-lg mb-4 text-center">
-          <p className="text-gray-700">{formatTimeRemaining()}</p>
-        </div>
-      )}
-
-      <div className="text-center text-sm text-gray-600">
-        <p>La cola virtual garantiza un proceso de compra justo y ordenado.</p>
-      </div>
+    <div>
+      <Button
+        onClick={handleJoinQueue}
+        disabled={isLoading || eventStatus === 'completed' || saleIsFuture}
+        className="w-full"
+        size="lg"
+      >
+        {buttonText}
+      </Button>
+      {errorMessage && <p className="text-red-500 text-sm mt-2 text-center">{errorMessage}</p>}
     </div>
-  )
+  );
 }

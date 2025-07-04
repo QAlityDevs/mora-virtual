@@ -177,6 +177,52 @@ export async function DELETE(
     }
 
     try {
+      const { data: seats, error: seatsError } = await supabase
+        .from("seats")
+        .select("id")
+        .eq("event_id", id);
+
+      if (seatsError) {
+        return NextResponse.json(
+          { error: "Error obteniendo asientos", details: seatsError.message },
+          { status: 500 }
+        );
+      }
+
+      const seatIds = seats?.map((s) => s.id) || [];
+
+      if (seatIds.length > 0) {
+        const { error: ticketsError } = await supabase
+          .from("tickets")
+          .delete()
+          .in("seat_id", seatIds);
+
+        if (ticketsError) {
+          return NextResponse.json(
+            {
+              error: "Error eliminando tickets",
+              details: ticketsError.message,
+            },
+            { status: 500 }
+          );
+        }
+      }
+
+      const { error: seatsDeleteError } = await supabase
+        .from("seats")
+        .delete()
+        .eq("event_id", id);
+
+      if (seatsDeleteError) {
+        return NextResponse.json(
+          {
+            error: "Error eliminando asientos",
+            details: seatsDeleteError.message,
+          },
+          { status: 500 }
+        );
+      }
+
       // Primero eliminar relaciones con actores
       const { error: relationError } = await supabase
         .from("event_actors")
